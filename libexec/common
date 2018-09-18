@@ -54,22 +54,6 @@ authorize_deploy_hosts_on_release_store() {
   if [[ "$AUTHORIZED_BUILD_HOST" != "true" && "$RELEASE_STORE_TYPE" = "remote" ]]; then
     status "Authorizing deploy hosts on release store"
     local _release_store_host=${RELEASE_STORE%:*}
-    __sync_remote "
-      [ -f ~/.profile ] && source ~/.profile
-      set -e
-      for _host in $HOSTS_APP_USER
-      do
-        _host=\${_host%:*}
-        _host=\${_host#*@}
-        if [[ \$(ssh-keygen -F \$_host | grep -c found) = 0 ]]
-        then
-          echo \"Authorizing \$_host on $_release_store_host:\" $SILENCE
-          ssh-keyscan \"\$_host\" 2>/dev/null $SILENCE
-          ssh-keyscan \"\$_host\" 2>/dev/null >> ~/.ssh/known_hosts
-        fi
-      done
-    " "$_release_store_host"
-
     AUTHORIZED_BUILD_HOST="true"
   fi
 }
@@ -83,16 +67,6 @@ authorize_release_store_on_build_host() {
   if [[ "$AUTHORIZED_RELEASE_STORE_HOST_ON_BUILD_HOST" != "true" && "$RELEASE_STORE_TYPE" = "remote" ]]; then
     status "Authorizing release store on build host"
     local _release_store_host=${RELEASE_STORE%:*}
-    _release_store_host=${_release_store_host#*@}
-    __sync_remote "
-      [ -f ~/.profile ] && source ~/.profile
-      set -e
-      if [[ \$(ssh-keygen -F \"$_release_store_host\" | grep -c found) = 0 ]]; then
-        echo \"Authorizing $_release_store_host on $HOSTS_APP_USER:\" $SILENCE
-        ssh-keyscan \"$_release_store_host\" 2>/dev/null $SILENCE
-        ssh-keyscan \"$_release_store_host\" 2>/dev/null >> ~/.ssh/known_hosts
-      fi
-    "
     AUTHORIZED_RELEASE_STORE_HOST_ON_BUILD_HOST="true"
   fi
 }
@@ -106,11 +80,6 @@ authorize_release_store_host() {
     status "Authorizing release store host"
     local _release_store_host=${RELEASE_STORE%:*}
     _release_store_host=${_release_store_host#*@}
-    if [[ $(ssh-keygen -F $_release_store_host | grep -c found) = 0 ]]; then
-      [[ "$VERBOSE" = "true" ]] && echo "Authorizing $_release_store_host on localhost:"
-      [[ "$VERBOSE" = "true" ]] && ssh-keyscan "$_release_store_host" 2>/dev/null
-      ssh-keyscan "$_release_store_host" 2>/dev/null >> ~/.ssh/known_hosts
-    fi
     AUTHORIZED_RELEASE_STORE_HOST="true"
   fi
 }

@@ -334,7 +334,7 @@ copy_release_to_release_store() {
       if [[ \"$_build_hosts\" = \"$_release_store_host\" ]]; then
         cp $_release_file $_dest_file_name
       else
-        cat $_release_file | ssh $_release_store_host \"cat > $_dest_file_name\"
+        echo -e \"put $_release_file $_dest_file_name\" | sftp $_release_store_host
       fi
       exit
     "
@@ -656,14 +656,7 @@ __get_releases_in_store() {
   elif [ "$RELEASE_STORE_TYPE" = "remote" ]; then
     local _release_store_path=${RELEASE_STORE#*:}
     local _release_store_host=${RELEASE_STORE%:*}
-    local _remote_job="
-      [ -f ~/.profile ] && source ~/.profile
-      set -e
-      cd $_release_store_path
-      ls -1 ${APP}_*.${_release_type}.tar.gz
-      exit
-    "
-    ssh -o ConnectTimeout="$SSH_TIMEOUT" "$_release_store_host" "$_remote_job $SILENCE"
+    echo "ls $_release_store_path" | sftp -q -o ConnectTimeout="$SSH_TIMEOUT" "$_release_store_host"
   else
     error_message "Cannot detect releases in store for store type ${RELEASE_STORE_TYPE}"; exit 2
   fi
@@ -710,37 +703,15 @@ upload_release_archive() {
     local _release_store_host=${RELEASE_STORE%:*}
     local _deploy_hosts="${HOSTS_APP_USER}"
     local _dest_file_name="${_destination_directory}/${APP}_${_release_version}.tar.gz"
-
+    local _source_file_name="${_release_store_path%%/}/${_release_file}"
     local _remote_job="
       [ -f ~/.profile ] && source ~/.profile
       set -e
-      cd $_release_store_path
-      [ -f \"$_release_file\" ]
-      background_jobs_pids=()
-      background_jobs=()
-    "
-    for _host in $_deploy_hosts; do
-      _remote_job="$_remote_job
-        if [[ \"$_host\" = \"$_release_store_host\" ]]; then
-          mkdir -p \"${_destination_directory}\"
-          cp $_release_file $_dest_file_name &
-        else
-          ssh \"$_host\" \"mkdir -p \\\"${_destination_directory}\\\" \"
-          cat $_release_file | ssh \"$_host\" \"cat > $_dest_file_name\" &
-        fi
-        background_jobs_pids+=(\"\$!\")
-      "
-    done
-    _remote_job="$_remote_job
-      for pid in \$(echo \"\${background_jobs_pids[@]}\"); do
-        while true; do
-          kill -0 \$pid 2>/dev/null && sleep 1 || break
-        done
-      done
+      echo -e \"get $_source_file_name $_dest_file_name\" | sftp $_release_store_host
       exit
     "
-    ssh -A -S none -o ConnectTimeout="$SSH_TIMEOUT" "$_release_store_host" "$_remote_job $SILENCE" || \
-      error "Uploading release file failed\n  source: ${_release_store_path%%/}/${_release_file} on $_release_store_host\n  destination: $_dest_file_name on deploy hosts"
+    ssh -A -S none -o ConnectTimeout="$SSH_TIMEOUT" "$_deploy_hosts" "$_remote_job $SILENCE" || \
+      error "Copying release file failed\n  source: $_source_file_name on $_release_store_host\n  destination: $_dest_file_name on $_deploy_hosts"
   else
     error_message "Cannot upload release for store type ${RELEASE_STORE_TYPE}"; exit 2
   fi
