@@ -427,7 +427,7 @@ upload_file_to_s3_release_store() {
     [[ $REPLY = [yY] ]] || exit 1
   }
   status "Uploading file $_source_file to $_destination_file"
-  AWS_ARGUMENTS="put ${AWS_BUCKET_NAME}/${_destination_file} ${_source_file}" AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" perl $BASE_PATH/libexec/aws || {
+  s3cmd --access_key "$AWS_ACCESS_KEY_ID" --secret_key "$AWS_SECRET_ACCESS_KEY" "put s3://${AWS_BUCKET_NAME}/${_destination_file} ${_source_file}" || {
       error "\nFAILED to upload $_source_file\n"
   }
 }
