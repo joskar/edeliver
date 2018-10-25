@@ -309,15 +309,12 @@ copy_release_to_release_store() {
       [ -f ~/.profile ] && source ~/.profile
       set -e
       cd $(dirname ${_release_file}) $SILENCE
-      AWS_ARGUMENTS=\"put ${AWS_BUCKET_NAME}/${APP}_${RELEASE_VERSION}${_release_revision}.${_release_type}.tar.gz $(basename ${_release_file})\" AWS_ACCESS_KEY_ID=\"$AWS_ACCESS_KEY_ID\" AWS_SECRET_ACCESS_KEY=\"$AWS_SECRET_ACCESS_KEY\" perl $SILENCE <<'EOF'${_aws_script_content}EOF ;" "$HOSTS_APP_USER" "
+      s3cmd --access_key "$AWS_ACCESS_KEY_ID" --secret_key "$AWS_SECRET_ACCESS_KEY" \"put s3://${AWS_BUCKET_NAME}/${APP}_${RELEASE_VERSION}${_release_revision}.${_release_type}.tar.gz $(basename ${_release_file})\"
 
       [ -f ~/.profile ] && source ~/.profile
       set -e
       cd $(dirname ${_release_file}) $SILENCE
-      AWS_ARGUMENTS=\"put ${AWS_BUCKET_NAME}/${APP}_${RELEASE_VERSION}${_release_revision}.${_release_type}.tar.gz $(basename ${_release_file})\" AWS_ACCESS_KEY_ID=\"$AWS_ACCESS_KEY_ID\" \\
-      AWS_SECRET_ACCESS_KEY=\"$AWS_SECRET_ACCESS_KEY\" perl $SILENCE <<'EOF'
-        content from libexec/aws file
-      EOF ;"
+      s3cmd --access_key "$AWS_ACCESS_KEY_ID" --secret_key "$AWS_SECRET_ACCESS_KEY" \"put s3://${AWS_BUCKET_NAME}/${APP}_${RELEASE_VERSION}${_release_revision}.${_release_type}.tar.gz $(basename ${_release_file})\""
   elif [ "$RELEASE_STORE_TYPE" = "local" ]; then
     status "Copying $(basename $_release_file) to release store"
     __create_directory_in_release_store "/releases"
@@ -483,7 +480,7 @@ download_file_from_s3_release_store() {
     exit 2
   }
   status "Downloading $_source_file to $_destination_file"
-  AWS_ARGUMENTS="get ${AWS_BUCKET_NAME}/${_source_file}" AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" perl $BASE_PATH/libexec/aws 2>/dev/null > "$_destination_file" || {
+  s3cmd --access_key "$AWS_ACCESS_KEY_ID" --secret_key "$AWS_SECRET_ACCESS_KEY" "get ${AWS_BUCKET_NAME}/${_source_file}" "$_destination_file" || {
       [[ -f "$_destination_file" ]] && [[ ! -s "$_destination_file" ]] && rm "$_destination_file"
       error "\nFAILED to download $_source_file\n"
   }
@@ -647,7 +644,7 @@ __get_releases_in_store() {
   local _release_type="$1"
   __detect_release_store_type
   if [ "$RELEASE_STORE_TYPE" = "s3" ]; then
-    AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" ${BASE_PATH}/libexec/aws ls ${AWS_BUCKET_NAME} 2>/dev/null | grep -o "${APP}_.*.${_release_type}.tar.gz" | sort -bt. -k1,1 -k2,2n -k3,3n -k4,4n -k5,5n
+    s3cmd --access_key "$AWS_ACCESS_KEY_ID" --secret_key "$AWS_SECRET_ACCESS_KEY" "ls s3://${AWS_BUCKET_NAME}" 2>/dev/null | grep -o "${APP}_.*.${_release_type}.tar.gz" | sort -bt. -k1,1 -k2,2n -k3,3n -k4,4n -k5,5n
   elif [ "$RELEASE_STORE_TYPE" = "local" ]; then
     local _release_file;
     for _release_file in $(ls -1 ${RELEASE_STORE}/releases/${APP}_*.${_release_type}.tar.gz | sort -bt. -k1,1 -k2,2n -k3,3n -k4,4n -k5,5n); do
@@ -689,16 +686,14 @@ upload_release_archive() {
       set -e
       mkdir -p ${_destination_directory} $SILENCE
       cd ${_destination_directory} $SILENCE
-      AWS_ARGUMENTS=\"get ${AWS_BUCKET_NAME}/${_release_file} \" AWS_ACCESS_KEY_ID=\"$AWS_ACCESS_KEY_ID\" AWS_SECRET_ACCESS_KEY=\"$AWS_SECRET_ACCESS_KEY\" perl > ${APP}_${_release_version}.tar.gz 2>/dev/null <<'EOF'${_aws_script_content}EOF ;" "$HOSTS_APP_USER" "
+      s3cmd --access_key ${AWS_ACCESS_KEY_ID} --secret_key ${AWS_SECRET_ACCESS_KEY} \"get s3://${AWS_BUCKET_NAME}/${_release_file}  ${APP}_${_release_version}.tar.gz\"
 
       [ -f ~/.profile ] && source ~/.profile
       set -e
       mkdir -p ${_destination_directory} $SILENCE
       cd ${_destination_directory} $SILENCE
-      AWS_ARGUMENTS=\"get ${AWS_BUCKET_NAME}/${_release_file} \" AWS_ACCESS_KEY_ID=\"$AWS_ACCESS_KEY_ID\" \\
-      AWS_SECRET_ACCESS_KEY=\"$AWS_SECRET_ACCESS_KEY\" perl > ${APP}_${_release_version}.tar.gz 2>/dev/null <<'EOF'
-        content from libexec/aws file
-      EOF ;"
+      s3cmd --access_key ${AWS_ACCESS_KEY_ID} --secret_key ${AWS_SECRET_ACCESS_KEY} \"get ${AWS_BUCKET_NAME}/${_release_file} ${APP}_${_release_version}.tar.gz\"
+      "
   elif [ "$RELEASE_STORE_TYPE" = "local" ]; then
     __remote "
       [ -f ~/.profile ] && source ~/.profile
