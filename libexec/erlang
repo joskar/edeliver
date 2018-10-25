@@ -304,7 +304,7 @@ copy_release_to_release_store() {
   fi
   status "Copying release ${RELEASE_VERSION} to $RELEASE_STORE_TYPE release store"
   if [ "$RELEASE_STORE_TYPE" = "s3" ]; then
-    local _aws_script_content=$(cat $BASE_PATH/libexec/aws)
+    # local _aws_script_content=$(cat $BASE_PATH/libexec/aws)
     __remote "
       [ -f ~/.profile ] && source ~/.profile
       set -e
@@ -680,7 +680,7 @@ upload_release_archive() {
   # when building releses with mix, the tar does not contain the app name as subdirectory
   [[ "$RELEASE_CMD" = "mix" ]] && [[ ! "$_release_file" =~ upgrade\.tar\.gz$ ]] && _destination_directory="${_destination_directory%%/}/${APP}"
   if [ "$RELEASE_STORE_TYPE" = "s3" ]; then
-    local _aws_script_content=$(cat $BASE_PATH/libexec/aws)
+    # local _aws_script_content=$(cat $BASE_PATH/libexec/aws)
     __remote "
       [ -f ~/.profile ] && source ~/.profile
       set -e
