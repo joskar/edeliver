@@ -309,12 +309,8 @@ copy_release_to_release_store() {
       [ -f ~/.profile ] && source ~/.profile
       set -e
       cd $(dirname ${_release_file}) $SILENCE
-      s3cmd --access_key "$AWS_ACCESS_KEY_ID" --secret_key "$AWS_SECRET_ACCESS_KEY" \"put s3://${AWS_BUCKET_NAME}/${APP}_${RELEASE_VERSION}${_release_revision}.${_release_type}.tar.gz $(basename ${_release_file})\"
-
-      [ -f ~/.profile ] && source ~/.profile
-      set -e
-      cd $(dirname ${_release_file}) $SILENCE
-      s3cmd --access_key "$AWS_ACCESS_KEY_ID" --secret_key "$AWS_SECRET_ACCESS_KEY" \"put s3://${AWS_BUCKET_NAME}/${APP}_${RELEASE_VERSION}${_release_revision}.${_release_type}.tar.gz $(basename ${_release_file})\""
+      s3cmd --access_key "$AWS_ACCESS_KEY_ID" --secret_key "$AWS_SECRET_ACCESS_KEY" put $(basename ${_release_file}) s3://${AWS_BUCKET_NAME}/${APP}_${RELEASE_VERSION}${_release_revision}.${_release_type}.tar.gz
+      "
   elif [ "$RELEASE_STORE_TYPE" = "local" ]; then
     status "Copying $(basename $_release_file) to release store"
     __create_directory_in_release_store "/releases"
@@ -424,7 +420,7 @@ upload_file_to_s3_release_store() {
     [[ $REPLY = [yY] ]] || exit 1
   }
   status "Uploading file $_source_file to $_destination_file"
-  s3cmd --access_key "$AWS_ACCESS_KEY_ID" --secret_key "$AWS_SECRET_ACCESS_KEY" "put s3://${AWS_BUCKET_NAME}/${_destination_file} ${_source_file}" || {
+  s3cmd --access_key "$AWS_ACCESS_KEY_ID" --secret_key "$AWS_SECRET_ACCESS_KEY" "put ${_source_file} s3://${AWS_BUCKET_NAME}/${_destination_file}" || {
       error "\nFAILED to upload $_source_file\n"
   }
 }
@@ -686,13 +682,7 @@ upload_release_archive() {
       set -e
       mkdir -p ${_destination_directory} $SILENCE
       cd ${_destination_directory} $SILENCE
-      s3cmd --access_key ${AWS_ACCESS_KEY_ID} --secret_key ${AWS_SECRET_ACCESS_KEY} \"get s3://${AWS_BUCKET_NAME}/${_release_file}  ${APP}_${_release_version}.tar.gz\"
-
-      [ -f ~/.profile ] && source ~/.profile
-      set -e
-      mkdir -p ${_destination_directory} $SILENCE
-      cd ${_destination_directory} $SILENCE
-      s3cmd --access_key ${AWS_ACCESS_KEY_ID} --secret_key ${AWS_SECRET_ACCESS_KEY} \"get ${AWS_BUCKET_NAME}/${_release_file} ${APP}_${_release_version}.tar.gz\"
+      s3cmd --access_key ${AWS_ACCESS_KEY_ID} --secret_key ${AWS_SECRET_ACCESS_KEY} get s3://${AWS_BUCKET_NAME}/${_release_file} ${APP}_${_release_version}.tar.gz
       "
   elif [ "$RELEASE_STORE_TYPE" = "local" ]; then
     __remote "
